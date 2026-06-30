@@ -13,6 +13,9 @@ on:
   schedule:
     - cron: '10 14 * * *' # Runs every day at 2:10 PM
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,7 +25,18 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Maven Build
-        run: mvn install  
+        run: mvn install 
+
+      - name: Upload build artifacts (WAR)
+        run: actions/upload-artifact@v3
+        with:
+          name: vprofile-app
+          path: target/*.war
+
+      - name: notify if build fails 
+        if: failure()
+        run: echo "Build failed! Please check the logs for details."
+
   Testing:
     runs-on: ubuntu-latest
     steps:
@@ -31,7 +45,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run Tests on main branch 
+        if: github.ref == 'refs/heads/main'
         run: mvn test
 
       - name: Checkstyle
+        if: github.ref == 'refs/heads/main'
         run: mvn checkstyle:checkstyle
+
+      - name: run tests on other branches 
+        if: github.ref != 'refs/heads/main'
+        run: echo "skipping unit tests and code analysis"
